@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "typeRoots": ["node_modules/@types"],
+    "sourceMap" : true,
+    "noUnusedLocals": true,
+    "lib": [
+      "es6",
+      "esnext.asynciterable"
+    ]    
+  }
+}
+

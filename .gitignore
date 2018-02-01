@@ -1,0 +1,7 @@
+**/*.map
+**/*.js
+.nyc_output/
+coverage/
+node_modules/
+bower_components/
+dist/
