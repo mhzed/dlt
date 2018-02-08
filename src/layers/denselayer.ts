@@ -54,6 +54,8 @@ export class DenseLayer extends BaseLayer {
     //if (this.inputLayer.type == Layer.Dense) input = input[1];
     this.inputActivation = input as Matrix;
     this.weightedOutputs = this.weight.matmul(input).addeqCol(this.bias);  // w * input + b
+    //this.weightedOutputs = this.bias.dup();
+    //this.weight.matmulAddto(input, this.weightedOutputs);
     this.outputActivation = this.activation.activate(this.weightedOutputs); // σ(w * input + b)
     return this.outputActivation;
   }

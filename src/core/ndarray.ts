@@ -1,28 +1,27 @@
 import { Rand } from "./rand";
 
-// Straigh-forward impl of n-dimensional array
+// Straigh-forward impl of n-dimensional array, with blas optimization
 type ExternData = number[] | Int8Array | Int16Array | Int32Array |
     Uint8Array | Uint16Array | Uint32Array |
     Float32Array | Float64Array | Uint8ClampedArray;
 
-type InternalDataType = Float32Array; // internal data type
-let InternalT = Float32Array;
+export type NdArrayDataType = Float32Array; // internal data type
 
 export class NdArray {
-  get length(): number  { return this.data.length }
+  public static Type = Float32Array;
+
+  get data(): NdArrayDataType { return this._data }
+  get length(): number  { return this._data.length }
   get shape(): number[] { return this._shape }  
   get dimension()       { return this._shape.length }
 
   // get element base on dimensional axis index, slow!! useful for test only
-  get(...args: number[]): number { return this.data[this.offset(...args)]; }
+  get(...args: number[]): number { return this._data[this.offset(...args)]; }
 
   sameShape(p: NdArray): boolean {
     return (arrayEqual(this._shape, p._shape));
   }
-  sameShapeAs(s: number[]): boolean {
-    return (arrayEqual(this._shape, s));
-  }
-  // test equality
+  // test equality WRT transposed shapes
   equals(p: NdArray): boolean {
     if (!this.sameShape(p)) return false;
     else {
@@ -33,7 +32,7 @@ export class NdArray {
         let right = cr.next();
         if (left.done || right.done) break;
         else {
-          if (this.data[left.value] !== p.data[right.value]) return false;
+          if (this._data[left.value] !== p._data[right.value]) return false;
         }
       }
       return true;
@@ -48,7 +47,7 @@ export class NdArray {
     if (args.length != this.dimension) throw new Error(`shape dictates ${this.dimension} parameters`);
     let newshape = args.map((n)=>this._shape[n])
     let newstride = args.map((n)=>this._stride[n])    
-    let ret = new NdArray(this.data, newshape, newstride);
+    let ret = new NdArray(this._data, newshape, newstride);
     return ret;
   }
   // returns if this is a transposed array:  the strides are not in descending order, meaning the data is 
@@ -60,45 +59,51 @@ export class NdArray {
     }
     return false;
   }
-
+  // return a new NdArray with shape set to newShape but with !!shared!! data as this
+  toshape(newShape: number[]): NdArray {
+    return NdArray.fromData(this.data, newShape);
+  }
   // create a new array with shape set to new Shape, if shape is omitted, this.shape is used
-  // data is copied into new array
+  // data is always copied into new array
   // returned array is always isTransposed() => false
   // thus: array.reshape()  => return a copy of array that removes transposed property (if any)
   reshape(newShape?: number[]): NdArray {
     if (!newShape) newShape = this.shape;
     const size = newShape.reduce((a,n)=>a*n, 1);
-    let ret = new NdArray(new InternalT(size), newShape, strideOf(newShape));
+    let ret = new NdArray(new NdArray.Type(size), newShape, strideOf(newShape));
     let i = 0;
     for (let offset of this.walkIndex()) {
-      ret.data[i++] = this.data[offset];
+      ret._data[i++] = this._data[offset];
       if (i>=size) break;
     }
     return ret;
   }
   // return an exact copy of this
   dup(): NdArray {
-    return new NdArray(this.data.slice(0), this._shape.slice(0), this._stride.slice(0));
+    return new NdArray(this._data.slice(0), this._shape.slice(0), this._stride.slice(0));
   }
 
-  /*** Inernal algebraic, some may be blas optimized */
+  /*** Internal algebraic */
+  sum(): number {
+    return this._data.reduce((a, n) => a + n, 0);
+  }
   // find and return max value
   max(): number {
-    return this.data[this.argmax()];
+    return this._data[this.argmax()];
   }
   argmax(): number {
-    return this._argmax();
-  }
-  private _argmax(): number {
     let max = Number.MIN_VALUE;
     let reti = 0;
-    for (let i = 0; i<this.data.length; i++) {
-      if (this.data[i] > max ) {
-        max = this.data[i];
+    for (let i = 0; i<this._data.length; i++) {
+      if (this._data[i] > max ) {
+        max = this._data[i];
         reti = i;
       }
     }
     return reti;
+  }
+  magnitude(): number {
+    return Math.sqrt(this._data.reduce((a, n) => a + n * n, 0));
   }
   
   /**
@@ -115,11 +120,11 @@ export class NdArray {
     }
   }
   addeq(p: number): NdArray {
-    this.data.forEach((n,i)=>this.data[i]+=p);
+    this._data.forEach((n,i)=>this._data[i]+=p);
     return this;
   }
   addeqn(p: NdArray): NdArray {
-    this.data.forEach((n,i)=>this.data[i]+=p.data[i]);
+    this._data.forEach((n,i)=>this._data[i]+=p._data[i]);
     return this;
   }
   /**
@@ -139,7 +144,7 @@ export class NdArray {
     return this.addeq(-p);
   }
   subeqn(p: NdArray): NdArray {
-    for (let i=0; i<this.data.length; i++) this.data[i] -= p.data[i];
+    this._data.forEach((n,i)=>this._data[i]-=p._data[i]);
     return this;
   }
   /**
@@ -156,14 +161,15 @@ export class NdArray {
     }
   }
   muleq(p: number): NdArray {
-    this.data.forEach((n,i)=>this.data[i] = n * p);
+    this._data.forEach((n,i)=>this._data[i] = n * p);
     return this;
   }
+  // hadamard
   muleqn(p: NdArray): NdArray {
-    this.data.forEach((n,i)=>this.data[i] = n * p.data[i]);
+    this._data.forEach((n,i)=>this._data[i] = n * p._data[i]);
     return this;
   }
-    
+  
   /**
    * inverse this: x -> 1/x
    */
@@ -171,7 +177,7 @@ export class NdArray {
     return this.dup().inveq();
   }
   inveq(): NdArray {
-    this.data.forEach((n,i)=>this.data[i] = 1/n);
+    this._data.forEach((n,i)=>this._data[i] = 1/n);
     return this;
   }
   /**
@@ -181,27 +187,52 @@ export class NdArray {
     return this.dup().expeq();
   }
   expeq(): NdArray {
-    this.data.forEach((n,i)=>this.data[i] = Math.exp(n));
+    this._data.forEach((n,i)=>this._data[i] = Math.exp(n));
     return this;    
   }
 
+  hasNaN(): boolean {
+    for (let i=0; i<this._data.length; i++) if (isNaN(this._data[i])) return true;
+    return false;
+  }
+  
   /**
    * create an array with data and shape
-   * shape is by default a 2D column vector:  [data.length, 1]
    * stride by default right most dimension = least significant
    */
-  static from(p: ExternData, shape?: number[], stride?: number[] ): NdArray {
-    if (!shape ) shape = [p.length, 1];
-    let data = new InternalT(p.length);
+  static from(p: ExternData, shape: number[], stride?: number[] ): NdArray {
+    let data = new NdArray.Type(p.length);
     for (let i=0; i<data.length; i++) data[i] = p[i]
     return new NdArray(data, shape, stride || strideOf(shape))
   }
   /**
-   * create an array of zeroes with provide shape
+   * short hand for from(p, [p.length, 1]); returns a single column matrix
+   * @param p a col vector
+   */
+  static fromCol(p: ExternData): NdArray {
+    return NdArray.from(p, [p.length, 1])
+  }
+  /**
+   * short hand for from(p, [1,p.length]); returns a single row matrix
+   * @param p a row vector
+   */
+  static fromRow(p: ExternData): NdArray {
+    return NdArray.from(p, [1,p.length])
+  }
+  /**
+   * construct Matri directly from data: no copying
+   * @param data use this data
+   * @param shape 
+   */
+  static fromData(data: NdArrayDataType, shape: number[]): NdArray {
+    return new NdArray(data, shape, strideOf(shape));
+  }  
+  /**
+   * create an array of zeroes with provided shape
    */
   static zeros(shape: number[]): NdArray {
     const size = shape.reduce((a,n)=>a*n, 1);
-    let data = new InternalT(size); // by default zero-ed, assuming TypedArray
+    let data = new NdArray.Type(size); // by default zero-ed, assuming TypedArray
     return new NdArray(data, shape, strideOf(shape))
   }
 
@@ -210,29 +241,10 @@ export class NdArray {
    */
   static randn(shape: number[], deviation=1, mean=0): NdArray {
     const size = shape.reduce((a,n)=>a*n, 1);
-    let data = new InternalT(size);
+    let data = new NdArray.Type(size);
     data.forEach((n,i)=>data[i] = (Rand.rand()*2-1 + mean)*deviation);
     return new NdArray(data, shape, strideOf(shape))
   }
-
-  public toString(colSize = 5): string {
-    if (this.dimension <= 2) {
-      let res = '';
-      for (let r = 0; r<this._shape[0]; r++) {
-        if (this.dimension == 2) {
-          for (let c = 0; c<this._shape[1]; c++) {
-            res += padL(this.get(r,c), colSize);
-          }
-        } else {
-          res += padL(this.get(r),colSize);
-        }
-        res += "\n";
-      }
-      return res;
-    } else {
-      return '[Dimension too large]';
-    }
-  }  
 
   /********************** private section ******************************* */
   // walkIndex WRT to this._strides, always increment the least significant (right most) dimension first
@@ -264,15 +276,11 @@ export class NdArray {
       throw new Error(`stride mismatch, call reshape on transposed NdArray`);
     }
   }
-  protected constructor(protected data: InternalDataType, protected _shape: number[], protected _stride: number[]) {
+  protected constructor(protected _data: NdArrayDataType, protected _shape: number[], protected _stride: number[]) {
   }
   // calcualte index offset in data based on dimension axis index, slow!
   protected offset(...args): number {
     return this._stride.reduce((a,v,i)=>a+v*args[i], 0);
-  }
-  hasNaN(): boolean {
-    for (let i=0; i<this.data.length; i++) if (isNaN(this.data[i])) return true;
-    return false;
   }
 }
 
@@ -295,11 +303,4 @@ function strideOf(shape: number[]): number[] {
   }
   stride.push(1);
   return stride;
-}
-function padL(a: number, length: number, pad:string=' '): string {
-  let digit = a.toString()||''
-  if (digit.length > length-1) {  // no room for pads
-    digit = digit.slice(0, length-2) + '?';
-  }
-  return (new Array((length)+1).join(pad)+digit).slice(-(length))
 }

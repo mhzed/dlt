@@ -1,5 +1,6 @@
 import { Matrix as Mtrx } from "vectorious";
 import { Rand } from "./rand";
+
 // import * as nblas from "nblas";
 // supported external type for 'from'
 type ExternData = number[] | Int8Array | Int16Array | Int32Array |
@@ -230,6 +231,18 @@ export class Matrix {
   matmul(p: Matrix): Matrix {
     return new Matrix(this.matrix.multiply(p.matrix));
   }
+  // matmulAddto(p: Matrix, res: Matrix): Matrix {
+  //   var r1 = this.shape[0],
+  //       c1 = this.shape[1],
+  //       r2 = p.shape[0],
+  //       c2 = p.shape[1],
+  //       ressize = (r1 * c2);
+
+  //   if (c1 !== r2) throw new Error('sizes do not match');        
+  //   if (ressize != res.length) throw new Error('res sizes do not match');        
+  //   nblas.gemm(this.data, p.data, res.data, r1, c2, c1);
+  //   return res;
+  // }
 
   sum(): number {
     return this._sum();
@@ -403,7 +416,7 @@ function padL(a: number, length: number, pad:string=' '): string {
   }
   return (new Array((length)+1).join(pad)+digit).slice(-(length))
 }
-
+import *  as nblas from 'nblas';
 try {
   const _nblas = require("nblas");
   Matrix.prototype.sum = function() {
@@ -415,5 +428,11 @@ try {
   Matrix.dot = function(l, r) {
     return _nblas.dot(l, r);
   }
+  // Matrix.prototype.dup = function(): Matrix {
+  //   let dupdata = new InternalT(this.length);
+  //   nblas.copy(this.data, dupdata);
+  //   return new (Matrix as any)(Mtrx.fromTypedArray(dupdata, this.shape));
+  // }
+
 } catch (e) {
 }

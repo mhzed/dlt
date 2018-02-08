@@ -6,7 +6,7 @@ import { InputLayer } from '../src/layers/inputlayer';
 import { DenseLayer } from '../src/layers/denselayer';
 import { StopWhenNoBetterThanAverage, StopAt } from '../src/stoppers';
 import { Train } from '../src/train';
-import { Rand } from '../src/rand';
+import { Rand } from '../src/core/rand';
 import { DropoutLayer } from '../src/layers/dropoutlayer';
 import { BaseLayer } from '../src/layers/baselayer';
 import { SigmoidAcitivation } from '../src/activation/sigmoid';
