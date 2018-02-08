@@ -1,5 +1,6 @@
 import {  LabelData, EpochStopper, Layer } from "./types";
-import { Matrix } from "./core/matrix";
+import { NdArray } from "./core/ndarray";
+import { ndm } from "./core/ndm.matrix";
 import { Rand } from "./core/rand";
 import { BaseLayer } from "./layers/baselayer";
 import { InputLayer } from "./layers/inputlayer";
@@ -7,12 +8,14 @@ import { InputLayer } from "./layers/inputlayer";
 // import { Matrix } from './Matrix';
 // import { LayerClass, LabelData, WeightInitializer, Layer,
 //   ActivationFunction, InputLayer, FullyConnectedLayer } from './DlTypes';
-
+import { applyblas } from '../src/core/applyblas';
+import * as nblas from 'nblas';
+applyblas(nblas);
 
 function batchUpdate(net: InputLayer, batch: LabelData[], eta: number) : void {
-  let stackedIputs: Matrix, stackedLabels: Matrix;
-  stackedIputs = Matrix.stackCols(batch.map((b)=>b.input));
-  stackedLabels = Matrix.stackCols(batch.map((b)=>b.label))
+  let stackedIputs: NdArray, stackedLabels: NdArray;
+  stackedIputs = ndm.matrix.stackCols(batch.map((b)=>b.input));
+  stackedLabels = ndm.matrix.stackCols(batch.map((b)=>b.label))
 
   let activation: any = stackedIputs;
   let layer: BaseLayer;
@@ -53,7 +56,7 @@ function singleUpdate(net: InputLayer, batch: LabelData[], eta: number) : void {
 export class Train {
 
   // perform a forward pass for evaluation purpose
-  private static forwardEvaluate(net: InputLayer, input: Matrix): Matrix {
+  private static forwardEvaluate(net: InputLayer, input: NdArray): NdArray {
     let activation: any = input;
     for (let layer of net.step(0)) {
       if (layer.type != Layer.Dropout) {

@@ -190,7 +190,37 @@ export class NdArray {
     this._data.forEach((n,i)=>this._data[i] = Math.exp(n));
     return this;    
   }
-
+  /**
+   * sigmoid element wise: x -> 1/(1+e^-x)
+   */
+  sigmoid(): NdArray {
+    return this.dup().sigmoideq();
+  }
+  sigmoideq(): NdArray {
+    this.data.forEach((n,i) => this.data[i] = 1/(1+Math.exp(-n)) );
+    return this;    
+  }
+  /**
+   * relu element wise: x -> max(0,x)
+   */
+  relu(): NdArray {
+    return this.dup().relueq();
+  }
+  relueq(): NdArray {
+    this.data.forEach((n,i)=>this.data[i] = n>0?n:0);
+    return this;    
+  }
+  /**
+   * apply softmax element wise: x => e^x / sum(e^X) (X=0...n)
+   */
+  softmax(): NdArray {
+    return this.dup().softmaxeq();
+  }
+  softmaxeq(): NdArray {
+    let denom = this.data.reduce((a,n)=>a+Math.exp(n), 0);
+    this.data.forEach((n,i)=>this.data[i] = Math.exp(n)/denom);
+    return this;    
+  }
   hasNaN(): boolean {
     for (let i=0; i<this._data.length; i++) if (isNaN(this._data[i])) return true;
     return false;

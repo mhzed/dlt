@@ -1,17 +1,15 @@
 import { Layer, ActivationFunction, WeightInitializer, 
     CostType, NormWeightInitializer, Regularizer } from "../types";
-import { Matrix } from "../core/matrix";
+import { NdArray } from "../core/ndarray";
+import { ndm } from "../core/ndm.matrix";
 import * as _ from "lodash";
 import { BaseLayer } from "./baselayer";
-
-export type DensesForwardType = Matrix;
-export type DensesBackPropType = Matrix;
 
 export class DenseLayer extends BaseLayer {
   readonly type = Layer.Dense;
 
-  private weight: Matrix;
-  private bias:   Matrix;
+  private weight: NdArray;
+  private bias:   NdArray;
 
   /**
    * 
@@ -50,21 +48,21 @@ export class DenseLayer extends BaseLayer {
    * activation = σ(weightedIputs)
    * 
    */
-  forward(input: any): DensesForwardType {
+  forward(input: any): NdArray {
     //if (this.inputLayer.type == Layer.Dense) input = input[1];
-    this.inputActivation = input as Matrix;
-    this.weightedOutputs = this.weight.matmul(input).addeqCol(this.bias);  // w * input + b
+    this.inputActivation = input as NdArray;
+    this.weightedOutputs = ndm.matrix.addeqCol(ndm.matrix.matmul(this.weight, input), this.bias);  // w * input + b
     //this.weightedOutputs = this.bias.dup();
     //this.weight.matmulAddto(input, this.weightedOutputs);
     this.outputActivation = this.activation.activate(this.weightedOutputs); // σ(w * input + b)
     return this.outputActivation;
   }
-  private weightedOutputs: Matrix;   // trasient values saved in forward pass, to be used in backprop
-  private inputActivation: Matrix;
-  private outputActivation: Matrix;
+  private weightedOutputs: NdArray;   // trasient values saved in forward pass, to be used in backprop
+  private inputActivation: NdArray;
+  private outputActivation: NdArray;
 
-  private nabla_b: Matrix;         // transient values saved during backprop, to be updated
-  private nabla_w: Matrix;
+  private nabla_b: NdArray;         // transient values saved during backprop, to be updated
+  private nabla_w: NdArray;
 
   /** 
    * input: for output layer, this is the label
@@ -72,17 +70,17 @@ export class DenseLayer extends BaseLayer {
    * stop:  whether backprop stops at this layer, aka the hidden layer immediately after input layer
    *        if stop is true, then a matMul can be skipped, which saves LOTS of time.
    */
-  backprop(input: DensesBackPropType, stop: boolean): DensesBackPropType {
-    let nabla_b: Matrix;
-    let nabla_w: Matrix;
+  backprop(input: NdArray, stop: boolean): NdArray {
+    let nabla_b: NdArray;
+    let nabla_w: NdArray;
 
     if (this.cost) { // last layer, input is label
       nabla_b = this.activation.cost(input, this.weightedOutputs, this.outputActivation, this.cost);  
-      nabla_w = nabla_b.matmul(this.inputActivation.T);
+      nabla_w = ndm.matrix.matmul(nabla_b, ndm.matrix.T(this.inputActivation));
     } else {    // hiddenlayers
       let sp = this.activation.derivative(this.weightedOutputs);
       nabla_b = input.muleqn(sp);
-      nabla_w = nabla_b.matmul(this.inputActivation.T);
+      nabla_w = ndm.matrix.matmul(nabla_b, ndm.matrix.T(this.inputActivation));
     }
     if (this.nabla_b == null) {
       this.nabla_b = nabla_b;
@@ -93,7 +91,7 @@ export class DenseLayer extends BaseLayer {
     }
     this.weightedOutputs = this.outputActivation = this.inputActivation = null;
     if (!stop) {
-      return this.weight.T.matmul(nabla_b);
+      return ndm.matrix.matmul(ndm.matrix.T(this.weight), nabla_b);
     } else {
       return null;
     } 
@@ -107,7 +105,7 @@ export class DenseLayer extends BaseLayer {
     this.weight.subeqn(this.nabla_w.muleq(learningRate));
     if (this.nabla_b.shape[1] > 1) {
       // bias is normally a column vector, but for batch data, the column size == batch size, thus sum into 1 column
-      this.bias.subeqn(this.nabla_b.sumCols().muleq(learningRate));
+      this.bias.subeqn(ndm.matrix.sumCols(this.nabla_b).muleq(learningRate));
     } else {
       this.bias.subeqn(this.nabla_b.muleq(learningRate));
     }

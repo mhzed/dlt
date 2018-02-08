@@ -70,8 +70,9 @@ export namespace ndm {
     }
 
     /**
-     * Transpose the parameter so that it can be safely matmul-ed
-     * Data may or may not be copied.
+     * Transpose the parameter so that it can always be matmul-ed
+     * More specifically, the transpose shuffles numbers around so that blas's gemm routine can be directly
+     * applied.
      * 
      * @param rhs two dimensional array to be transposed
      */

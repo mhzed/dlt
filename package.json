@@ -4,8 +4,8 @@
   "description": "dlt --------",
   "main": "index.js",
   "scripts": {
-    "test": "nyc mocha --require ts-node/register test/**/*.ts",
-    "testcover": "nyc --reporter=lcov mocha --require ts-node/register test/**/*.ts",
+    "test": "nyc mocha --require ts-node/register test/test.ts",
+    "testcover": "nyc --reporter=lcov mocha --require ts-node/register test/test.ts",
     "train": "ts-node bin/trainmnist.ts",
     "lint": "tslint --project .",
     "tswatch": "tsc --watch"

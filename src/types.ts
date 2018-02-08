@@ -1,18 +1,18 @@
-import { Matrix } from "./core/matrix";
+import { NdArray } from "./core/ndarray";
 
 export interface LabelData {
-  input: Matrix    // the image pixesl = size of input layer 
-  label: Matrix    // the desired output
+  input: NdArray    // the image pixesl = size of input layer 
+  label: NdArray    // the desired output
 }
 export interface WeightInitializer {
-  weights(shape: [number, number]): Matrix;
+  weights(shape: [number, number]): NdArray;
 }
 export type CostType = "cross-entropy" | "quadratic";
 
 export interface ActivationFunction {
-  activate(input: Matrix) : Matrix;
-  derivative(input: Matrix) : Matrix;
-  cost(label: Matrix, z: Matrix, activation: Matrix, c: CostType): Matrix;
+  activate(input: NdArray) : NdArray;
+  derivative(input: NdArray) : NdArray;
+  cost(label: NdArray, z: NdArray, activation: NdArray, c: CostType): NdArray;
 }
 
 export enum Layer {
@@ -30,7 +30,7 @@ export interface EpochStopper {
 
 export interface Regularizer {
   // it's safe to update weights in place
-  regularize(weights: Matrix): Matrix;
+  regularize(weights: NdArray): NdArray;
 }
 
 export class L2Regularizer {
@@ -41,7 +41,7 @@ export class L2Regularizer {
       this.scale = 1-this.eta*this.decayRate/this.sizeTrain 
     }
 
-  regularize(weights: Matrix): Matrix {
+  regularize(weights: NdArray): NdArray {
     weights.muleq(this.scale)
     return weights;
   }
@@ -55,7 +55,7 @@ export class L1Regularizer {
       this.delta = this.eta*this.decayRate/this.sizeTrain 
     }
 
-  regularize(weights: Matrix): Matrix {
+  regularize(weights: NdArray): NdArray {
     // TODO: verify
     (weights as any).data.forEach((n,i)=>(weights as any).data[i] -= this.delta * (n>0?1:-1))
     return weights;
@@ -63,7 +63,7 @@ export class L1Regularizer {
 }
 
 export class NormWeightInitializer implements WeightInitializer {
-  weights(shape: [number, number]): Matrix {
-    return Matrix.randn(shape).muleq(1/Math.sqrt(shape[1]));
+  weights(shape: [number, number]): NdArray {
+    return NdArray.randn(shape).muleq(1/Math.sqrt(shape[1]));
   }
 }

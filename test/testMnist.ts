@@ -3,13 +3,14 @@ import * as path from 'path';
 import { prepareMnistData } from "../src/mnist/prepareMnistData";
 import { LabelData, L2Regularizer, L1Regularizer } from '../src/types';
 import { StopWhenNoBetterThanAverage } from '../src/stoppers';
-//import { Matrix } from '../src/core/matrix';
 import { Rand } from '../src/core/rand';
 import { InputLayer } from '../src/layers/inputlayer';
 import { DenseLayer } from '../src/layers/denselayer';
 import { Train } from '../src/train';
 import { BaseLayer } from '../src/layers/baselayer';
 import { SigmoidAcitivation } from '../src/activation/sigmoid';
+import { applyblas } from '../src/core/applyblas';
+import * as nblas from 'nblas';
 
 Rand.seed();
 //Rand.seed('abc');  // fix randomness: result in predicatble output for verification
@@ -27,6 +28,7 @@ const TrainSize = DataSize - TestSize;
 describe('mnist', function() {
 
   it('load data', async function() {
+    applyblas(nblas);
     this.timeout(10000);
     dataset = await prepareMnistData(path.resolve(__dirname, "../data/mnist/train-images-idx3-ubyte"), 
       path.resolve(__dirname, "../data/mnist/train-labels-idx1-ubyte"), DataSize);

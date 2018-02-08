@@ -22,7 +22,7 @@ describe('ndarray', function() {
     let a = NdArray.fromCol([1,2,3]);
     let b = a.add(1).sub(2).mul(2)
     a.sum().should.equal(6);
-    a.magnitude().should.equal(Math.sqrt(14));
+    NdArray.fromCol([3,4]).magnitude().should.equal(5);
     assert.ok(b.equals(NdArray.fromCol([0,2,4])));
     assert.equal(b.max(), 4);
     assert.equal(b.argmax(), 2);

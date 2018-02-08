@@ -1,11 +1,11 @@
 import { Layer, ActivationFunction, NormWeightInitializer, WeightInitializer } from "../types";
-import {  Matrix } from "../core/matrix";
+import {  NdArray } from "../core/ndarray";
 import * as _ from "lodash";
 import { Rand } from "../core/rand";
 import { BaseLayer } from "./baselayer";
 
 type Feature = {
-  weight: Matrix;
+  weight: NdArray;
   bias: number;
 }
 export class ConvolutionLayer extends BaseLayer {

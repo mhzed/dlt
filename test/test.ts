@@ -1,0 +1,3 @@
+
+import "./testndarray";
+import "./testMnist";
