@@ -6,6 +6,7 @@
   "scripts": {
     "test": "nyc mocha --require ts-node/register test/test.ts",
     "testcover": "nyc --reporter=lcov mocha --require ts-node/register test/test.ts",
+    "testcore": "nyc --reporter=lcov mocha --require ts-node/register test/testndarray.ts",
     "train": "ts-node bin/trainmnist.ts",
     "lint": "tslint --project .",
     "tswatch": "tsc --watch"

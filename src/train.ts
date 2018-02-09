@@ -1,21 +1,17 @@
 import {  LabelData, EpochStopper, Layer } from "./types";
-import { NdArray } from "./core/ndarray";
-import { ndm } from "./core/ndm.matrix";
-import { Rand } from "./core/rand";
+
+import { NdArray, Matrix, Rand } from "./core";
 import { BaseLayer } from "./layers/baselayer";
 import { InputLayer } from "./layers/inputlayer";
 // import * as _ from 'lodash'
 // import { Matrix } from './Matrix';
 // import { LayerClass, LabelData, WeightInitializer, Layer,
 //   ActivationFunction, InputLayer, FullyConnectedLayer } from './DlTypes';
-import { applyblas } from '../src/core/applyblas';
-import * as nblas from 'nblas';
-applyblas(nblas);
 
 function batchUpdate(net: InputLayer, batch: LabelData[], eta: number) : void {
   let stackedIputs: NdArray, stackedLabels: NdArray;
-  stackedIputs = ndm.matrix.stackCols(batch.map((b)=>b.input));
-  stackedLabels = ndm.matrix.stackCols(batch.map((b)=>b.label))
+  stackedIputs = Matrix.stackCols(batch.map((b)=>b.input));
+  stackedLabels = Matrix.stackCols(batch.map((b)=>b.label))
 
   let activation: any = stackedIputs;
   let layer: BaseLayer;
@@ -33,25 +29,25 @@ function batchUpdate(net: InputLayer, batch: LabelData[], eta: number) : void {
   }
 }
 
-function singleUpdate(net: InputLayer, batch: LabelData[], eta: number) : void {
+// function singleUpdate(net: InputLayer, batch: LabelData[], eta: number) : void {
 
-  for (let b of batch) {
-    let activation: any = b.input;
-    let layer: BaseLayer;
-    for (layer of net.step(0)) {
-      activation = layer.forward(activation);
-    }
-    let backpropstate = b.label;
-    for (; layer.type != Layer.Input; layer=layer.inputLayer) {
-      let lastlayer = layer.inputLayer.type == Layer.Input
-        || (layer.inputLayer.type == Layer.Dropout && layer.inputLayer.inputLayer.type == Layer.Input);
-      backpropstate = (layer).backprop(backpropstate, lastlayer);
-    }
-  }
-  for (let layer of net.step(1)) {
-    if ((layer as any).update) (layer as any).update(eta/batch.length);
-  }
-}
+//   for (let b of batch) {
+//     let activation: any = b.input;
+//     let layer: BaseLayer;
+//     for (layer of net.step(0)) {
+//       activation = layer.forward(activation);
+//     }
+//     let backpropstate = b.label;
+//     for (; layer.type != Layer.Input; layer=layer.inputLayer) {
+//       let lastlayer = layer.inputLayer.type == Layer.Input
+//         || (layer.inputLayer.type == Layer.Dropout && layer.inputLayer.inputLayer.type == Layer.Input);
+//       backpropstate = (layer).backprop(backpropstate, lastlayer);
+//     }
+//   }
+//   for (let layer of net.step(1)) {
+//     if ((layer as any).update) (layer as any).update(eta/batch.length);
+//   }
+// }
 
 export class Train {
 

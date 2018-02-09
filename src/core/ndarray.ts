@@ -18,12 +18,12 @@ export class NdArray {
   // get element base on dimensional axis index, slow!! useful for test only
   get(...args: number[]): number { return this._data[this.offset(...args)]; }
 
-  sameShape(p: NdArray): boolean {
-    return (arrayEqual(this._shape, p._shape));
+  sameShape(shape: number[]): boolean {
+    return (arrayEqual(this._shape, shape));
   }
   // test equality WRT transposed shapes
   equals(p: NdArray): boolean {
-    if (!this.sameShape(p)) return false;
+    if (!this.sameShape(p.shape)) return false;
     else {
       let cl = this.walkIndex();
       let cr = p.walkIndex();
@@ -59,18 +59,18 @@ export class NdArray {
     }
     return false;
   }
-  // return a new NdArray with shape set to newShape but with !!shared!! data as this
-  toshape(newShape: number[]): NdArray {
+  // return a new NdArray with shape set to newShape but with !!shared!! data
+  reshape(newShape: number[]): NdArray {
+    const size = newShape.reduce((a,n)=>a*n, 1);
+    if (size != this.data.length) throw new Error("new shape does not match existing data size");
     return NdArray.fromData(this.data, newShape);
   }
-  // create a new array with shape set to new Shape, if shape is omitted, this.shape is used
-  // data is always copied into new array
-  // returned array is always isTransposed() => false
-  // thus: array.reshape()  => return a copy of array that removes transposed property (if any)
-  reshape(newShape?: number[]): NdArray {
-    if (!newShape) newShape = this.shape;
-    const size = newShape.reduce((a,n)=>a*n, 1);
-    let ret = new NdArray(new NdArray.Type(size), newShape, strideOf(newShape));
+  // if self isTransposed(), return duplicate of self that's not transposed
+  // otherwise same as dup();
+  rearrange(): NdArray {
+    if (!this.isTransposed()) return this.dup();
+    const size = this.length;
+    let ret = new NdArray(new NdArray.Type(size), this.shape, strideOf(this.shape));
     let i = 0;
     for (let offset of this.walkIndex()) {
       ret._data[i++] = this._data[offset];
@@ -83,7 +83,6 @@ export class NdArray {
     return new NdArray(this._data.slice(0), this._shape.slice(0), this._stride.slice(0));
   }
 
-  /*** Internal algebraic */
   sum(): number {
     return this._data.reduce((a, n) => a + n, 0);
   }
@@ -301,7 +300,7 @@ export class NdArray {
     }      
   }
   protected _shapeCheck(p: NdArray): void {
-    if (!this.sameShape(p)) throw new Error(`shape mismatch: ${this._shape} <= ${p._shape}`);
+    if (!this.sameShape(p.shape)) throw new Error(`shape mismatch: ${this._shape} <= ${p._shape}`);
     if (!arrayEqual(this._stride, p._stride)) { 
       throw new Error(`stride mismatch, call reshape on transposed NdArray`);
     }
@@ -327,10 +326,10 @@ function arrayEqual(a1, a2): boolean {
   }
 }
 function strideOf(shape: number[]): number[] {
-  let stride = []
-  for (let i=0; i<shape.length-1; i++) {
-    stride.push(shape.slice(i+1).reduce((a,n)=>a*n,1))
+  let stride = new Array(shape.length) as number[];
+  stride[stride.length - 1] = 1;
+  for (let x = stride.length - 2; x>=0; x--) {
+    stride[x] = stride[x+1] * shape[x+1];
   }
-  stride.push(1);
   return stride;
 }

@@ -1,18 +1,20 @@
 import { Layer } from "../types";
-import { Shape, Matrix } from "../core/matrix";
+import { NdArray } from "../core/ndarray";
 import { BaseLayer } from "./baselayer";
 
 export class InputLayer extends BaseLayer {
   readonly type = Layer.Input;
   public size: number;
-  constructor(public shape: Shape) {
+  constructor(public shape: number[]) {
     super(null);
-    this.size = shape[0] * shape[1];
+    this.size = shape.reduce((a, n) => a * n, 1);
     this.inputLayer = null;
     this.nextLayer = null;
   }
-  forward(input: Matrix): Matrix {
-    //if (input.shape[0] != this.size) throw new Error(`Incorrect size ${input.length}, expect ${this.size}`);    
+  validate(input: NdArray) {
+    if (!input.sameShape(this.shape)) throw new Error("shape mismatch");
+  }
+  forward(input: NdArray): NdArray {
     return input;
   }
   backprop(input: any, stop: boolean): any {

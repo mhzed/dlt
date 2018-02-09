@@ -1,15 +1,15 @@
 import { ActivationFunction, CostType } from "../types";
-import { Matrix } from "../core/matrix";
+import { NdArray } from "../core/ndarray";
 
 export class SigmoidAcitivation implements ActivationFunction {
-  activate(weightedInputs: Matrix) : Matrix {
+  activate(weightedInputs: NdArray) : NdArray {
     return weightedInputs.sigmoid();
   }
-  derivative(input: Matrix): Matrix {
+  derivative(input: NdArray): NdArray {
     let sigmoid = input.sigmoid();
     return sigmoid.muleqn(sigmoid.mul(-1).addeq(1));
   }
-  cost(label: Matrix, z: Matrix, activation: Matrix, c: CostType): Matrix {
+  cost(label: NdArray, z: NdArray, activation: NdArray, c: CostType): NdArray {
     if (c == "cross-entropy") {
       return activation.sub(label);
     } else if (c == "quadratic") {

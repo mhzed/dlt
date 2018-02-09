@@ -1,7 +1,7 @@
 import { Layer, ActivationFunction, WeightInitializer, 
     CostType, NormWeightInitializer, Regularizer } from "../types";
 import { NdArray } from "../core/ndarray";
-import { ndm } from "../core/ndm.matrix";
+import { Matrix } from "../core/matrix";
 import * as _ from "lodash";
 import { BaseLayer } from "./baselayer";
 
@@ -51,7 +51,7 @@ export class DenseLayer extends BaseLayer {
   forward(input: any): NdArray {
     //if (this.inputLayer.type == Layer.Dense) input = input[1];
     this.inputActivation = input as NdArray;
-    this.weightedOutputs = ndm.matrix.addeqCol(ndm.matrix.matmul(this.weight, input), this.bias);  // w * input + b
+    this.weightedOutputs = Matrix.addeqCol(Matrix.mul(this.weight, input), this.bias);  // w * input + b
     //this.weightedOutputs = this.bias.dup();
     //this.weight.matmulAddto(input, this.weightedOutputs);
     this.outputActivation = this.activation.activate(this.weightedOutputs); // σ(w * input + b)
@@ -76,11 +76,11 @@ export class DenseLayer extends BaseLayer {
 
     if (this.cost) { // last layer, input is label
       nabla_b = this.activation.cost(input, this.weightedOutputs, this.outputActivation, this.cost);  
-      nabla_w = ndm.matrix.matmul(nabla_b, ndm.matrix.T(this.inputActivation));
+      nabla_w = Matrix.mul(nabla_b, Matrix.T(this.inputActivation));
     } else {    // hiddenlayers
       let sp = this.activation.derivative(this.weightedOutputs);
       nabla_b = input.muleqn(sp);
-      nabla_w = ndm.matrix.matmul(nabla_b, ndm.matrix.T(this.inputActivation));
+      nabla_w = Matrix.mul(nabla_b, Matrix.T(this.inputActivation));
     }
     if (this.nabla_b == null) {
       this.nabla_b = nabla_b;
@@ -91,7 +91,7 @@ export class DenseLayer extends BaseLayer {
     }
     this.weightedOutputs = this.outputActivation = this.inputActivation = null;
     if (!stop) {
-      return ndm.matrix.matmul(ndm.matrix.T(this.weight), nabla_b);
+      return Matrix.mul(Matrix.T(this.weight), nabla_b);
     } else {
       return null;
     } 
@@ -105,7 +105,7 @@ export class DenseLayer extends BaseLayer {
     this.weight.subeqn(this.nabla_w.muleq(learningRate));
     if (this.nabla_b.shape[1] > 1) {
       // bias is normally a column vector, but for batch data, the column size == batch size, thus sum into 1 column
-      this.bias.subeqn(ndm.matrix.sumCols(this.nabla_b).muleq(learningRate));
+      this.bias.subeqn(Matrix.sumCols(this.nabla_b).muleq(learningRate));
     } else {
       this.bias.subeqn(this.nabla_b.muleq(learningRate));
     }

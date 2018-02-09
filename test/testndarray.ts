@@ -1,11 +1,9 @@
 
 import { NdArray } from "../src/core/ndarray";
-import { ndm } from "../src/core/ndm.matrix";
-import { applyblas } from "../src/core/applyblas";
+import { Matrix } from "../src/core/matrix";
 import * as assert from'assert';
 import * as should from "should";
 import { Rand } from "../src/core/rand";
-import * as nblas from 'nblas';
 
 describe('ndarray', function() {
 
@@ -76,9 +74,10 @@ describe('ndarray', function() {
       assert.ok(r.transpose([1,0]).add(rt).equals(NdArray.from([2,4,6,-2,-4,-6], [2,3])));
     })
 
-    r.toshape([2,3]).equals(NdArray.fromData(r.data, [2,3])).should.equals(true);
+    r.reshape([2,3]).equals(NdArray.fromData(r.data, [2,3])).should.equals(true);
+    should.throws(()=>r.reshape([1,3]));
     
-    let rr = r.transpose([1,0]).reshape();
+    let rr = r.transpose([1,0]).rearrange();
     rr.equals(rt).should.equal(true);
     rr.isTransposed().should.equal(false);
   })
@@ -101,48 +100,48 @@ describe('ndarray', function() {
   });
 
   it('print', function() {
-    ndm.matrix.toString(NdArray.from([112355,12345,1234], [1,3]), 5);
+    Matrix.toString(NdArray.from([112355,12345,1234], [1,3]), 5);
   })
   
   it('matrix', function() {
-    ndm.matrix.identiy(2).equals(NdArray.from([1,0,0,1], [2,2])).should.equal(true);
-    ndm.matrix.oneHotCol(1,3).equals(NdArray.from([0,1,0], [3,1])).should.equal(true);
+    Matrix.identiy(2).equals(NdArray.from([1,0,0,1], [2,2])).should.equal(true);
+    Matrix.oneHotCol(1,3).equals(NdArray.from([0,1,0], [3,1])).should.equal(true);
     should.throws(()=>{
-      ndm.matrix.oneHotCol(3,3)
+      Matrix.oneHotCol(3,3)
     });
-    ndm.matrix.T(NdArray.from([1,0,1], [3,1])).equals(NdArray.from([1,0,1], [1,3])).should.equal(true);
-    ndm.matrix.T(NdArray.from([1,0,1,0], [2,2])).equals(NdArray.from([1,1,0,0], [2,2])).should.equal(true);
+    Matrix.T(NdArray.from([1,0,1], [3,1])).equals(NdArray.from([1,0,1], [1,3])).should.equal(true);
+    Matrix.T(NdArray.from([1,0,1,0], [2,2])).equals(NdArray.from([1,1,0,0], [2,2])).should.equal(true);
   })
 
   it('matrix matmul', function() {
-    let a = ndm.matrix.T(NdArray.fromCol([1,2,3]));
+    let a = Matrix.T(NdArray.fromCol([1,2,3]));
     let b = NdArray.from([1,2,3], [3,1]);
-    let c = ndm.matrix.matmul(a, b)
+    let c = Matrix.mul(a, b)
     assert.ok(c.equals(NdArray.from([14], [1,1])))    
-    let d = ndm.matrix.matmul(b, a);
+    let d = Matrix.mul(b, a);
     assert.ok(d.equals(NdArray.from([1,2,3,2,4,6,3,6,9], [3,3])))
 
     let x = NdArray.from([1,2,3, -1,-2,-3], [2,3]);
     let y = NdArray.from([1,2,3, -1,-2,-3], [3,2]);
-    assert.ok(ndm.matrix.matmul(x, y).equals(NdArray.from([1,-9,-1,9], [2,2])))
+    assert.ok(Matrix.mul(x, y).equals(NdArray.from([1,-9,-1,9], [2,2])))
     
     should.throws(()=>{
-      ndm.matrix.matmul(NdArray.zeros([2,3]), NdArray.zeros([2,3]));
+      Matrix.mul(NdArray.zeros([2,3]), NdArray.zeros([2,3]));
     })
 
-    ndm.matrix.dot(a.data, b.data).should.equals(14);
-    ndm.matrix.dotat(a.data, 1, b.data, 0, 2).should.equals(8);
+    Matrix.dot(a.data, b.data).should.equals(14);
+    Matrix.dotat(a.data, 1, b.data, 0, 2).should.equals(8);
   })
 
   it('matrix stack', function() {
     let x1 = NdArray.fromRow([1,2,3]);
     let x2 =  NdArray.from([1,2,3, -1,-2,-3], [2,3]);
     let x3 = NdArray.fromRow([0,0,0]);
-    should.ok(ndm.matrix.stackRows([x1, x2, x3]).equals(
+    should.ok(Matrix.stackRows([x1, x2, x3]).equals(
       NdArray.from([1,2,3,1,2,3,-1,-2,-3,0,0,0], [4,3])
     ));
     should.throws(()=>{
-      ndm.matrix.stackRows([
+      Matrix.stackRows([
         NdArray.fromRow([1,2]), 
         NdArray.fromRow([1,2,3])
       ]);
@@ -151,34 +150,34 @@ describe('ndarray', function() {
     let y1 =  NdArray.fromCol([1,2,3]);
     let y2 =  NdArray.from([1,2,3, -1,-2,-3], [3,2]);
     let y3 = NdArray.fromCol([0,0,0]);
-    should.ok(ndm.matrix.stackCols([y1, y2, y3]).equals(
+    should.ok(Matrix.stackCols([y1, y2, y3]).equals(
       NdArray.from([1,1,2,0,2,3,-1,0,3,-2,-3,0], [3,4])
     ));
     should.throws(()=>{
-      ndm.matrix.stackCols([
+      Matrix.stackCols([
         NdArray.fromCol([1,2]), 
         NdArray.fromCol([1,2,3])
       ]);
     })
     
     let x =  NdArray.from([1,2,3, -1,-2,-3], [2,3]);
-    should.ok(ndm.matrix.addeqCol(x, NdArray.fromCol([1,-1])).equals(
+    should.ok(Matrix.addeqCol(x, NdArray.fromCol([1,-1])).equals(
       NdArray.from([2,3,4,-2,-3,-4], [2,3])
     ))
     should.throws(()=>{
-      ndm.matrix.addeqCol(x, NdArray.fromCol([1,-1, 0]))
+      Matrix.addeqCol(x, NdArray.fromCol([1,-1, 0]))
     })
-    should.ok(ndm.matrix.sumCols(x).equals(NdArray.fromCol([9,-9])));
+    should.ok(Matrix.sumCols(x).equals(NdArray.fromCol([9,-9])));
   })  
 
   it('blas', function() {
-    applyblas(nblas);
-    let a = ndm.matrix.T(NdArray.fromCol([1,2,3]));
+    require("../src/core/applyblas");
+    let a = Matrix.T(NdArray.fromCol([1,2,3]));
     let b = NdArray.from([1,2,3], [3,1]);
-    let c = ndm.matrix.matmul(a, b)
+    let c = Matrix.mul(a, b)
     assert.ok(c.equals(NdArray.from([14], [1,1])))    
     should.throws(()=>{
-      ndm.matrix.matmul(NdArray.zeros([2,3]), NdArray.zeros([2,3]));
+      Matrix.mul(NdArray.zeros([2,3]), NdArray.zeros([2,3]));
     })
     
     b.sum().should.equal(6);
@@ -188,7 +187,7 @@ describe('ndarray', function() {
     b.muleq(-1).equals(NdArray.fromCol([-1,-2,-3])).should.equals(true);
     NdArray.fromCol([3,4]).magnitude().should.equal(5);
     NdArray.fromCol([]).magnitude().should.equal(0);
-    ndm.matrix.dot(a.data, b.data).should.equals(-14);
+    Matrix.dot(a.data, b.data).should.equals(-14);
   })
 })
 

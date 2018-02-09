@@ -1,15 +1,17 @@
 
 import * as path from 'path' 
+
 import { prepareMnistData } from "../src/mnist/prepareMnistData";
-import { L2Regularizer, L1Regularizer } from '../src/types';
 import { InputLayer } from '../src/layers/inputlayer';
 import { DenseLayer } from '../src/layers/denselayer';
-import { StopWhenNoBetterThanAverage, StopAt } from '../src/stoppers';
 import { Train } from '../src/train';
 import { Rand } from '../src/core/rand';
-import { DropoutLayer } from '../src/layers/dropoutlayer';
 import { BaseLayer } from '../src/layers/baselayer';
 import { SigmoidAcitivation } from '../src/activation/sigmoid';
+// import { DropoutLayer } from '../src/layers/dropoutlayer';
+// import { L2Regularizer, L1Regularizer } from '../src/types';
+import { StopAt } from '../src/stoppers';
+// import { StopWhenNoBetterThanAverage } from '../src/stoppers';
 
 async function main () {
     Rand.seed("1234");

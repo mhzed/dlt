@@ -1,3 +1,5 @@
 
-import "./testndarray";
-import "./testMnist";
+require("./testndarray");
+(()=>{
+  require("./testMnist");
+})();
