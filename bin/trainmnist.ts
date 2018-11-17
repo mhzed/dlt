@@ -17,7 +17,7 @@ import { ReluActivation } from '../src/activation/relu';
 import { StopWhenNoBetterThanAverage } from '../src/stoppers';
 // import { StopAt } from '../src/stoppers';
 
-const NeuronSize = 30;
+const NeuronSize = 100;
 const ConvertImg = (img: Uint8Array) => NdArray.fromCol(img).mul(1/255);
 
 async function main () {

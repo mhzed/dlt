@@ -75,11 +75,11 @@ export class Train {
 
     let updateFunc ;
     if (Train.isAllDense(net)) {
+      // batch mini-batch together in a single matrix, significantly faster at cost of more memory
       updateFunc = batchUpdate;
     } else {
       updateFunc = singleUpdate;
     }
-    updateFunc = singleUpdate;
 
     let nepochs = 0;
     while (true) {
