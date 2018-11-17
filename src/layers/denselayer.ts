@@ -51,13 +51,13 @@ export class DenseLayer extends BaseLayer {
   forward(input: any): NdArray {
     //if (this.inputLayer.type == Layer.Dense) input = input[1];
     this.inputActivation = input as NdArray;
-    this.weightedOutputs = Matrix.addeqCol(Matrix.mul(this.weight, input), this.bias);  // w * input + b
+    this.z = Matrix.addeqCol(Matrix.mul(this.weight, input), this.bias);  // w * input + b
     //this.weightedOutputs = this.bias.dup();
     //this.weight.matmulAddto(input, this.weightedOutputs);
-    this.outputActivation = this.activation.activate(this.weightedOutputs); // σ(w * input + b)
+    this.outputActivation = this.activation.activate(this.z); // σ(w * input + b)
     return this.outputActivation;
   }
-  private weightedOutputs: NdArray;   // trasient values saved in forward pass, to be used in backprop
+  private z: NdArray;   // trasient values saved in forward pass, to be used in backprop
   private inputActivation: NdArray;
   private outputActivation: NdArray;
 
@@ -75,11 +75,11 @@ export class DenseLayer extends BaseLayer {
     let nabla_w: NdArray;
 
     if (this.cost) { // last layer, input is label
-      nabla_b = this.activation.cost(input, this.weightedOutputs, this.outputActivation, this.cost);  
+      nabla_b = this.activation.cost(input, this.z, this.outputActivation, this.cost);  
       nabla_w = Matrix.mul(nabla_b, Matrix.T(this.inputActivation));
     } else {    // hiddenlayers
-      let sp = this.activation.derivative(this.weightedOutputs);
-      nabla_b = input.muleqn(sp);
+      let sp = this.activation.gradient(this.z, this.outputActivation);
+      nabla_b = input.muleqn(sp);   //
       nabla_w = Matrix.mul(nabla_b, Matrix.T(this.inputActivation));
     }
     if (this.nabla_b == null) {
@@ -89,7 +89,7 @@ export class DenseLayer extends BaseLayer {
       this.nabla_b.addeqn(nabla_b);
       this.nabla_w.addeqn(nabla_w);
     }
-    this.weightedOutputs = this.outputActivation = this.inputActivation = null;
+    this.z = this.outputActivation = this.inputActivation = null;
     if (!stop) {
       return Matrix.mul(Matrix.T(this.weight), nabla_b);
     } else {

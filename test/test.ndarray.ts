@@ -4,6 +4,7 @@ import { Matrix } from "../src/core/matrix";
 import * as assert from'assert';
 import * as should from "should";
 import { Rand } from "../src/core/rand";
+import { Volume } from "../src/core/volume";
 
 describe('ndarray', function() {
 
@@ -12,8 +13,7 @@ describe('ndarray', function() {
     assert.ok(NdArray.zeros([2,1]).equals(NdArray.fromCol([0,0])));
     assert.ok(NdArray.zeros([1,2]).equals(NdArray.fromRow([0,0])));
     assert.ok(NdArray.zeros([1,2]).equals(NdArray.fromData(new NdArray.Type([0,0]), [1,2])));
-    assert.ok(NdArray.randn([2,1]).length == 2);
-    
+    assert.ok(NdArray.randn([2,1]).length == 2);    
   })
 
   it('element wise scalar algebra', function() {
@@ -188,6 +188,34 @@ describe('ndarray', function() {
     NdArray.fromCol([3,4]).magnitude().should.equal(5);
     NdArray.fromCol([]).magnitude().should.equal(0);
     Matrix.dot(a.data, b.data).should.equals(-14);
+  })
+
+  it('volume', function(){
+    let a = NdArray.from([1,1,1,2,2,2,3,3,3], [3,3, 1]);
+    let w = Volume.sliceWindow(a, 1, 1, 2, 2);
+    w.equals(NdArray.from([2,2,3,3], [2,2,1])).should.equals(true);
+    w = Volume.sliceWindow(a, 2, 2, 2, 2);  // overflow cut
+    w.equals(NdArray.from([3,0,0,0], [2,2,1])).should.equals(true);
+
+    w = Volume.sliceWindow(a, 3, 3, 2, 2);  // entirely out or range, so return all zeros
+    w.equals(NdArray.from([0,0,0,0], [2,2,1])).should.equals(true);
+
+    w = Volume.sliceWindow(a, 2, 0, 2, 2);
+    w.equals(NdArray.from([3,3,0,0], [2,2,1])).should.equals(true);
+    w = Volume.sliceWindow(a, 0, 2, 2, 2);
+    w.equals(NdArray.from([1,0,2,0], [2,2,1])).should.equals(true);
+
+    w = Volume.sliceWindow(a, -1, 1, 2, 2);
+    w.equals(NdArray.from([0,0,1,1], [2,2,1])).should.equals(true);
+
+    a = NdArray.from([1,2,3,4,5,6,7,8,9], [3,3, 1]);
+    w = Volume.sliceWindow(a, -1, -1, 2, 2);
+    w.equals(NdArray.from([0,0,0,1], [2,2,1])).should.equals(true);
+
+    a = NdArray.from([1,1, 2,2, 3,3, 4,4, 5,5,6,6,7,7,8,8,9,9], [3,3, 2]);
+    w = Volume.sliceWindow(a, -1, -1, 2, 2);
+    w.equals(NdArray.from([0,0,0,0,0,0,1,1], [2,2,2])).should.equals(true);
+    
   })
 })
 

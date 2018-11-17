@@ -4,14 +4,13 @@ export class StopWhenNoBetterThanAverage implements EpochStopper {
 
   /**
    * 
-   * @param percEvaluator
+   * @param percEvaluator  return accuracy on validation dataset
    * @param lastN average over this many evaluations
-   * @param verbose wheter to print progress on epoch
    */
   constructor(
     private lastN: number, 
     private percEvaluator: ()=>number,
-    private nMatch = 2,
+    private nMatch = 1,
     private verbose = false) {
   }
 
@@ -20,7 +19,7 @@ export class StopWhenNoBetterThanAverage implements EpochStopper {
   // EpochStopper override
   onEpoch(iEpoch: number, elapsedSec: number): boolean {
     let perc = this.percEvaluator();
-    if (this.verbose) console.log(`${iEpoch}[${elapsedSec.toFixed(2)}s] ${(perc*100).toFixed(2)}%`);
+    if (this.verbose) console.log(`Epoch ${iEpoch}[${elapsedSec.toFixed(2)}s] ${(perc*100).toFixed(2)}% accurate`);
     let history = this.history;
     let average = history.reduce((a,p)=>a+p, 0) / history.length;
     let shouldStop = (perc <= average && history.length>=this.lastN);

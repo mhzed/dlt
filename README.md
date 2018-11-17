@@ -1,3 +1,4 @@
 dlt
 --------
 
+- Batch normalization:

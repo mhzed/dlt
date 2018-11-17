@@ -32,6 +32,7 @@ NdArray.prototype.subeqn = function(p: NdArray) {
   nblas.axpy((p as any).data, this._data, -1);
   return this;
 }
+
 NdArray.prototype.muleq = function(p: number) {
   nblas.scal(this._data, p);
   return this;

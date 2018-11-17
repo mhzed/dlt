@@ -10,20 +10,26 @@ export type NdArrayDataType = Float32Array; // internal data type
 export class NdArray {
   public static Type = Float32Array;
 
-  get data(): NdArrayDataType { return this._data }
   get length(): number  { return this._data.length }
-  get shape(): number[] { return this._shape }  
   get dimension()       { return this._shape.length }
-
-  // get element base on dimensional axis index, slow!! useful for test only
-  get(...args: number[]): number { return this._data[this.offset(...args)]; }
+  get data(): NdArrayDataType { return this._data }
+  // stride and shape should be immutable, but returning a copy is TOO expensive, thus:  don't change the returned
+  // instances!!!
+  get stride(): number[] { return this._stride }
+  get shape(): number[] { return this._shape }
+  
+  // get via dimensional indexes, slow!
+  get(...args: number[]): number { 
+    const offset = this._stride.reduce((a,v,i)=>a+v*(i<args.length?args[i]:0), 0);
+    return this._data[offset];
+  }
 
   sameShape(shape: number[]): boolean {
     return (arrayEqual(this._shape, shape));
   }
   // test equality WRT transposed shapes
   equals(p: NdArray): boolean {
-    if (!this.sameShape(p.shape)) return false;
+    if (!this.sameShape(p._shape)) return false;
     else {
       let cl = this.walkIndex();
       let cr = p.walkIndex();
@@ -70,7 +76,7 @@ export class NdArray {
   rearrange(): NdArray {
     if (!this.isTransposed()) return this.dup();
     const size = this.length;
-    let ret = new NdArray(new NdArray.Type(size), this.shape, strideOf(this.shape));
+    let ret = new NdArray(new NdArray.Type(size), this._shape, strideOf(this._shape));
     let i = 0;
     for (let offset of this.walkIndex()) {
       ret._data[i++] = this._data[offset];
@@ -189,79 +195,59 @@ export class NdArray {
     this._data.forEach((n,i)=>this._data[i] = Math.exp(n));
     return this;    
   }
-  /**
-   * sigmoid element wise: x -> 1/(1+e^-x)
-   */
-  sigmoid(): NdArray {
-    return this.dup().sigmoideq();
-  }
-  sigmoideq(): NdArray {
-    this.data.forEach((n,i) => this.data[i] = 1/(1+Math.exp(-n)) );
-    return this;    
-  }
-  /**
-   * relu element wise: x -> max(0,x)
-   */
-  relu(): NdArray {
-    return this.dup().relueq();
-  }
-  relueq(): NdArray {
-    this.data.forEach((n,i)=>this.data[i] = n>0?n:0);
-    return this;    
-  }
-  /**
-   * apply softmax element wise: x => e^x / sum(e^X) (X=0...n)
-   */
-  softmax(): NdArray {
-    return this.dup().softmaxeq();
-  }
-  softmaxeq(): NdArray {
-    let denom = this.data.reduce((a,n)=>a+Math.exp(n), 0);
-    this.data.forEach((n,i)=>this.data[i] = Math.exp(n)/denom);
-    return this;    
-  }
   hasNaN(): boolean {
     for (let i=0; i<this._data.length; i++) if (isNaN(this._data[i])) return true;
     return false;
   }
   
   /**
-   * create an array with data and shape
-   * stride by default right most dimension = least significant
+   * create an array with data and shape,
+   * data is always copied into internal buffer.
    */
-  static from(p: ExternData, shape: number[], stride?: number[] ): NdArray {
-    let data = new NdArray.Type(p.length);
-    for (let i=0; i<data.length; i++) data[i] = p[i]
-    return new NdArray(data, shape, stride || strideOf(shape))
+  static from(data: ExternData, shape: number[]): NdArray {
+    if (shape.reduce((a, s) => a * s, 1)!=data.length) { throw new Error("data size does not match shape")};
+    let buf = new NdArray.Type(data.length);
+    for (let i=0; i<data.length; i++) buf[i] = data[i]
+    return new NdArray(buf, shape, strideOf(shape))
   }
   /**
-   * short hand for from(p, [p.length, 1]); returns a single column matrix
+   * construct array directly from data: no copying
+   * no size validation is performed!
+   * @param data
+   * @param shape 
+   */
+  static fromData(data: NdArrayDataType, shape: number[]): NdArray {
+    return new NdArray(data, shape, strideOf(shape));
+  }    
+  /**
+   * short hand for from(p, [p.length, 1]); returns a single column array
    * @param p a col vector
    */
   static fromCol(p: ExternData): NdArray {
     return NdArray.from(p, [p.length, 1])
   }
   /**
-   * short hand for from(p, [1,p.length]); returns a single row matrix
+   * short hand for from(p, [1,p.length]); returns a single row array
    * @param p a row vector
    */
   static fromRow(p: ExternData): NdArray {
     return NdArray.from(p, [1,p.length])
   }
   /**
-   * construct Matri directly from data: no copying
-   * @param data use this data
-   * @param shape 
-   */
-  static fromData(data: NdArrayDataType, shape: number[]): NdArray {
-    return new NdArray(data, shape, strideOf(shape));
-  }  
-  /**
    * create an array of zeroes with provided shape
    */
   static zeros(shape: number[]): NdArray {
     const size = shape.reduce((a,n)=>a*n, 1);
     let data = new NdArray.Type(size); // by default zero-ed, assuming TypedArray
+    return new NdArray(data, shape, strideOf(shape))
+  }
+  /**
+   * create an array of 'value' with provided shape
+   */
+  static consts(shape: number[], value: number): NdArray {
+    const size = shape.reduce((a,n)=>a*n, 1);
+    let data = new NdArray.Type(size); // by default zero-ed, assuming TypedArray
+    data.forEach((v, i) => data[i] = value);
     return new NdArray(data, shape, strideOf(shape))
   }
 
@@ -279,8 +265,7 @@ export class NdArray {
   // walkIndex WRT to this._strides, always increment the least significant (right most) dimension first
   protected *walkIndex() {
     // think of dindex as [d0, d1, d2 ...],  each d can be incremened up to size defined in this._shapes
-    let dindex = new Array<number>(this._shape.length);
-    for (let i=0; i<dindex.length; i++) dindex[i] = 0;
+    let dindex = new Int32Array(this._shape.length);
     while (true) {
       let offset = 0;
       for (let i=0; i<dindex.length; i++) offset += dindex[i]*this._stride[i];
@@ -300,16 +285,12 @@ export class NdArray {
     }      
   }
   protected _shapeCheck(p: NdArray): void {
-    if (!this.sameShape(p.shape)) throw new Error(`shape mismatch: ${this._shape} <= ${p._shape}`);
+    if (!this.sameShape(p._shape)) throw new Error(`shape mismatch: ${this._shape} <= ${p._shape}`);
     if (!arrayEqual(this._stride, p._stride)) { 
       throw new Error(`stride mismatch, call reshape on transposed NdArray`);
     }
   }
   protected constructor(protected _data: NdArrayDataType, protected _shape: number[], protected _stride: number[]) {
-  }
-  // calcualte index offset in data based on dimension axis index, slow!
-  protected offset(...args): number {
-    return this._stride.reduce((a,v,i)=>a+v*args[i], 0);
   }
 }
 

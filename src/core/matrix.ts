@@ -34,10 +34,11 @@ export class Matrix {
    * @param colSize 
    */
   static toString(n: NdArray, colSize = 5): string {
-    dimensionCheck(n);      
+    if (n.dimension < 2) throw new Error('at least 2d');
     let res = '';
     for (let r = 0; r<n.shape[0]; r++) {
       for (let c = 0; c<n.shape[1]; c++) {
+        // if n.dimension > 2d, just the first element at r,c is shown
         res += padL(n.get(r,c), colSize);
       }
       res += "\n";
@@ -139,7 +140,7 @@ export class Matrix {
   static stackRows(rows: NdArray[]): NdArray {
     let colsize = rows[0].shape[1],
         rowsize = rows.reduce((a,m)=>a+m.shape[0], 0),
-        ret = NdArray.from(new NdArray.Type(rowsize * colsize), [rowsize, colsize]),
+        ret = NdArray.fromData(new NdArray.Type(rowsize * colsize), [rowsize, colsize]),
         offset = 0;
     for ( let row of rows) {  
       // by default storage is row based, so we copy data directly
@@ -173,7 +174,6 @@ export class Matrix {
     return sum;
   }
 }
-
 
 function dimensionCheck(rhs: NdArray) {
   if (rhs.dimension != 2) throw new Error('2 dimensional matrix only');

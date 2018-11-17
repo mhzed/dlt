@@ -5,13 +5,15 @@ export interface LabelData {
   label: NdArray    // the desired output
 }
 export interface WeightInitializer {
-  weights(shape: [number, number]): NdArray;
+  weights(shape: number[]): NdArray;
 }
 export type CostType = "cross-entropy" | "quadratic";
 
 export interface ActivationFunction {
-  activate(input: NdArray) : NdArray;
-  derivative(input: NdArray) : NdArray;
+  activate(z: NdArray) : NdArray;               // apply activation to z, return a = f(z)
+  // apply derivative to z, return f'(z).  Often calulation of derivative requires the 'a' value returned by
+  // activate(z), supply it if it's available.
+  gradient(z: NdArray, a?: NdArray) : NdArray;  
   cost(label: NdArray, z: NdArray, activation: NdArray, c: CostType): NdArray;
 }
 
@@ -63,7 +65,9 @@ export class L1Regularizer {
 }
 
 export class NormWeightInitializer implements WeightInitializer {
-  weights(shape: [number, number]): NdArray {
-    return NdArray.randn(shape).muleq(1/Math.sqrt(shape[1]));
+  weights(shape: number[]): NdArray {
+    const size = shape.reduce((a, n) => a * n, 1);
+    return NdArray.randn(shape).muleq(1/Math.sqrt(size));
   }
 }
+
